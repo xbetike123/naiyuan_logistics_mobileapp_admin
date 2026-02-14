@@ -141,6 +141,23 @@ class ApiClient {
     });
   }
 
+  async addShipmentDetailsAndGenerateBill(
+    shipmentId: string,
+    data: {
+      weightKg: number;
+      volumeCBM?: number;
+      billingMethod: string;
+      packingFee?: number;
+      additionalFees?: number;
+      notes?: string;
+    },
+  ) {
+    return this.request(`/admin/shipments/${shipmentId}/details-and-bill`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   async getBills(status?: string, search?: string) {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
@@ -166,6 +183,53 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Shipping Rates
+  async getShippingRates() {
+    return this.request('/admin/rates');
+  }
+
+  async createShippingRate(data: {
+    category: string;
+    label: string;
+    billingUnit: string;
+    freightCostUSD: number;
+    clearingCost: number;
+    clearingCurrency: string;
+    minChargeUSD?: number;
+    description?: string;
+  }) {
+    return this.request('/admin/rates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateShippingRate(id: string, data: any) {
+    return this.request(`/admin/rates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteShippingRate(id: string) {
+    return this.request(`/admin/rates/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Exchange Rates
+  async getExchangeRates() {
+    return this.request('/admin/exchange-rates');
+  }
+
+  async createExchangeRate(data: { fromCurrency: string; toCurrency: string; rate: number }) {
+    return this.request('/admin/exchange-rates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
 }
 
 export const api = new ApiClient();

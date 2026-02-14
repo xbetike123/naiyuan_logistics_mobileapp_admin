@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronLeft,
   Menu,
+  Inbox,
 } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '@/lib/api';
@@ -20,6 +21,8 @@ import { api } from '@/lib/api';
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
   { label: 'Packages', href: '/packages', icon: Package },
+  { label: 'Shipment Requests', href: '/shipment-requests', icon: Inbox },
+  { label: 'Master Shipments', href: '/master-shipments', icon: Truck },
   { label: 'Shipments', href: '/shipments', icon: Truck },
   { label: 'Bills', href: '/bills', icon: Receipt },
   { label: 'Users', href: '/users', icon: Users },
