@@ -141,6 +141,36 @@ class ApiClient {
     });
   }
 
+
+  // Master Shipments
+  async getMasterShipments(status?: string) {
+    const params = status ? `?status=${status}` : '';
+    return this.request(`/admin/master-shipments${params}`);
+  }
+
+  async getMasterShipment(id: string) {
+    return this.request(`/admin/master-shipments/${id}`);
+  }
+
+  async createMasterShipment(data: {
+    method: string;
+    route?: string;
+    destination?: string;
+    estimatedArrival?: string;
+    shipmentIds: string[];
+  }) {
+    return this.request('/admin/master-shipments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateMasterShipmentStatus(id: string, data: { status: string; notes?: string; location?: string }) {
+    return this.request(`/admin/master-shipments/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
   async addShipmentDetailsAndGenerateBill(
     shipmentId: string,
     data: {
@@ -228,6 +258,55 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+
+  // Tracking Statuses
+  async getTrackingStatuses() {
+    return this.request('/admin/tracking-statuses');
+  }
+
+  async createTrackingStatus(data: { code: string; label: string; description?: string; sortOrder?: number }) {
+    return this.request('/admin/tracking-statuses', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async updateTrackingStatus(id: string, data: any) {
+    return this.request(`/admin/tracking-statuses/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async deleteTrackingStatus(id: string) {
+    return this.request(`/admin/tracking-statuses/${id}`, { method: 'DELETE' });
+  }
+
+  // Tracking Locations
+  async getTrackingLocations() {
+    return this.request('/admin/tracking-locations');
+  }
+
+  async createTrackingLocation(data: { code: string; label: string; country?: string; sortOrder?: number }) {
+    return this.request('/admin/tracking-locations', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async updateTrackingLocation(id: string, data: any) {
+    return this.request(`/admin/tracking-locations/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async deleteTrackingLocation(id: string) {
+    return this.request(`/admin/tracking-locations/${id}`, { method: 'DELETE' });
+  }
+
+
+  // Shipment Requests
+  async getShipmentRequests() {
+    return this.request('/admin/shipment-requests');
+  }
+
+  async approveShipmentRequest(id: string) {
+    return this.request(`/admin/shipment-requests/${id}/approve`, { method: 'PUT' });
+  }
+
+  async rejectShipmentRequest(id: string, reason?: string) {
+    return this.request(`/admin/shipment-requests/${id}/reject`, { method: 'PUT', body: JSON.stringify({ reason }) });
   }
 
 }

@@ -380,7 +380,17 @@ function CreateMasterShipmentModal({ onClose, onCreated }: { onClose: () => void
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-surface-700 mb-1.5">Destination</label>
-              <input type="text" value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="e.g. Lagos, Nigeria" className="w-full px-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+              <select value={destination} onChange={(e) => setDestination(e.target.value)} required className="w-full px-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-400">
+                <option value="">Select destination</option>
+                <option value="LAGOS_NIGERIA">🇳🇬 Lagos, Nigeria</option>
+                <option value="ABUJA_NIGERIA">🇳🇬 Abuja, Nigeria</option>
+                <option value="GHANA">🇬🇭 Ghana</option>
+                <option value="UK">🇬🇧 United Kingdom</option>
+                <option value="USA">🇺🇸 United States</option>
+                <option value="ITALY">🇮🇹 Italy</option>
+                <option value="CANADA">🇨🇦 Canada</option>
+                <option value="UAE">🇦🇪 UAE</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-surface-700 mb-1.5">Estimated Arrival</label>
@@ -456,19 +466,71 @@ function CreateMasterShipmentModal({ onClose, onCreated }: { onClose: () => void
 // ════════════════════════════════════════════════════════════════════
 
 function UpdateMasterStatusModal({ masterShipment, onClose, onUpdated }: { masterShipment: MasterShipment; onClose: () => void; onUpdated: () => void }) {
-  const [status, setStatus] = useState(masterShipment.status);
+  const [trackingStatus, setTrackingStatus] = useState('');
+  const [locationCode, setLocationCode] = useState('');
+
+  // Use destination from master shipment
+  const destination = masterShipment.destination || '';
+
   const [notes, setNotes] = useState('');
-  const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
+  const [trackingStatuses, setTrackingStatuses] = useState<any[]>([]);
+  const [trackingLocations, setTrackingLocations] = useState<any[]>([]);
+  const [fetching, setFetching] = useState(true);
+
+  // Filter statuses: show common (ALL) + destination-specific
+  const filteredStatuses = trackingStatuses.filter(
+    (s) => s.destination === 'ALL' || s.destination === destination
+  );
+
+  // Determine shipment-level status from tracking status
+  function getShipmentStatus(trackingCode: string): string {
+    const map: Record<string, string> = {
+      'RECEIVED_WAREHOUSE': 'PROCESSING',
+      'PREPARED_SHIPPING': 'PROCESSING',
+      'DEPARTED_CONSOLIDATION': 'SHIPPED',
+      'ARRIVED_AIRPORT': 'SHIPPED',
+      'CUSTOMS_CLEARED_ORIGIN': 'SHIPPED',
+      'IN_TRANSIT': 'IN_TRANSIT',
+      'TRANSIT_HUB': 'IN_TRANSIT',
+      'ARRIVED_DESTINATION': 'ARRIVED',
+      'CUSTOMS_CLEARED_DEST': 'ARRIVED',
+      'OUT_FOR_DELIVERY': 'OUT_FOR_DELIVERY',
+      'DELIVERED': 'DELIVERED',
+    };
+    return map[trackingCode] || 'PROCESSING';
+  }
+
+  useEffect(() => {
+    Promise.all([api.getTrackingStatuses(), api.getTrackingLocations()])
+      .then(([s, l]) => {
+        setTrackingStatuses(s.filter((x: any) => x.isActive));
+        setTrackingLocations(l.filter((x: any) => x.isActive));
+      })
+      .finally(() => setFetching(false));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!trackingStatus) {
+      alert('Select a tracking status');
+      return;
+    }
+    if (!locationCode) {
+      alert('Select a location');
+      return;
+    }
+
     setLoading(true);
+    const selectedStatus = trackingStatuses.find((s) => s.code === trackingStatus);
+    const selectedLocation = trackingLocations.find((l) => l.code === locationCode);
+    const shipmentStatus = getShipmentStatus(trackingStatus);
+
     try {
       await api.updateMasterShipmentStatus(masterShipment.id, {
-        status,
-        notes: notes || undefined,
-        location: location || undefined,
+        status: shipmentStatus,
+        notes: `${selectedStatus?.label || trackingStatus}${notes ? ' — ' + notes : ''}`,
+        location: selectedLocation?.label || locationCode,
       });
       onUpdated();
     } catch (err: any) {
@@ -480,37 +542,107 @@ function UpdateMasterStatusModal({ masterShipment, onClose, onUpdated }: { maste
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
         <div className="flex items-center justify-between p-6 border-b border-surface-100">
           <div>
-            <h3 className="text-lg font-semibold text-surface-900">Update Master Shipment</h3>
+            <h3 className="text-lg font-semibold text-surface-900">Update Tracking</h3>
             <p className="text-sm text-surface-500 font-mono mt-0.5">{masterShipment.masterTrackingNo}</p>
-            <p className="text-xs text-surface-400 mt-1">This will update all {masterShipment.shipments.length} linked shipments</p>
+            <p className="text-xs text-surface-400 mt-1">This updates all {masterShipment.shipments.length} linked shipments</p>
           </div>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-600"><X size={20} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-surface-700 mb-1.5">New Status</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-400">
-              {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
-            </select>
+
+        {fetching ? (
+          <div className="flex items-center justify-center h-48">
+            <div className="w-6 h-6 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-surface-700 mb-1.5">Location</label>
-            <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Guangzhou Port, Lagos Customs" className="w-full px-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-surface-700 mb-1.5">Notes</label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Status update notes..." rows={3} className="w-full px-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none" />
-          </div>
-          <div className="flex items-center gap-3 pt-2">
-            <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 rounded-xl bg-surface-900 text-white text-sm font-medium hover:bg-surface-800 disabled:opacity-50 transition-all">
-              {loading ? 'Updating...' : 'Update All Shipments'}
-            </button>
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-surface-200 text-surface-600 text-sm font-medium hover:bg-surface-50 transition-all">Cancel</button>
-          </div>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            {/* Destination (from master shipment) */}
+            <div className="p-3 rounded-xl bg-surface-50 border border-surface-100">
+              <p className="text-xs text-surface-500">Destination</p>
+              <p className="text-sm font-medium text-surface-900">{destination.replace(/_/g, ' ') || 'Not set'}</p>
+            </div>
+
+            {/* Tracking Status Dropdown — filtered by destination */}
+            <div>
+              <label className="block text-sm font-medium text-surface-700 mb-1.5">Tracking Status *</label>
+              <select
+                value={trackingStatus}
+                onChange={(e) => setTrackingStatus(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:opacity-50"
+              >
+                <option value="">Select tracking status...</option>
+                {filteredStatuses.map((s) => (
+                  <option key={s.code} value={s.code}>{s.label}</option>
+                ))}
+              </select>
+              {trackingStatus && (
+                <p className="text-xs text-surface-400 mt-1.5">
+                  Shipment status will be set to: <span className="font-medium text-surface-600">{getShipmentStatus(trackingStatus).replace(/_/g, ' ')}</span>
+                </p>
+              )}
+            </div>
+
+            {/* Location Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-surface-700 mb-1.5">Location *</label>
+              <select
+                value={locationCode}
+                onChange={(e) => setLocationCode(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-400"
+              >
+                <option value="">Select location...</option>
+                {trackingLocations.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.label}{l.country ? ` (${l.country})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Additional Notes */}
+            <div>
+              <label className="block text-sm font-medium text-surface-700 mb-1.5">Additional Notes (optional)</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g. Expected to arrive in 3 days..."
+                rows={2}
+                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
+              />
+            </div>
+
+            {/* Preview */}
+            {trackingStatus && locationCode && (
+              <div className="p-4 rounded-xl bg-surface-50 border border-surface-100">
+                <p className="text-xs font-medium text-surface-500 uppercase tracking-wider mb-2">Preview</p>
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 rounded-full bg-brand-400 mt-1.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-surface-900">
+                      {filteredStatuses.find((s) => s.code === trackingStatus)?.label}
+                    </p>
+                    <p className="text-xs text-surface-500">
+                      📍 {trackingLocations.find((l) => l.code === locationCode)?.label}
+                    </p>
+                    {notes && <p className="text-xs text-surface-400 mt-0.5">{notes}</p>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 pt-2">
+              <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 rounded-xl bg-surface-900 text-white text-sm font-medium hover:bg-surface-800 disabled:opacity-50 transition-all">
+                {loading ? 'Updating...' : 'Update All Shipments'}
+              </button>
+              <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-surface-200 text-surface-600 text-sm font-medium hover:bg-surface-50 transition-all">Cancel</button>
+            </div>
+          </form>
+
+        )}
       </div>
     </div>
   );
@@ -585,49 +717,51 @@ function AddDetailsModal({ shipment, onClose, onSaved }: { shipment: any; onClos
               <p className="text-sm text-surface-500 mt-1">{result.bill.billNumber}</p>
             </div>
 
-            <div className="space-y-3 bg-surface-50 p-4 rounded-xl border border-surface-100">
-              <div className="flex justify-between text-sm">
-                <span className="text-surface-500">Billing Method</span>
-                <span className="font-medium text-surface-900">{result.shipment.billingMethod}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-surface-500">Weight</span>
-                <span className="font-medium text-surface-900">{result.shipment.weightKg} kg</span>
-              </div>
-              {result.shipment.volumeCBM && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-surface-500">Volume</span>
-                  <span className="font-medium text-surface-900">{result.shipment.volumeCBM} CBM</span>
+            {/* Rate */}
+            <div className="p-4 rounded-xl bg-surface-50">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-surface-500">Billing Method</span>
+                  <span className="font-medium">{result.shipment.billingMethod}</span>
                 </div>
-              )}
-              <div className="flex justify-between text-sm">
-                <span className="text-surface-500">Rate</span>
-                <span className="font-medium text-surface-900">
-                  {result.shipment.billingMethod === 'VOLUME'
-                    ? `₦${Number(result.rate.ratePerCBM).toLocaleString()}/CBM`
-                    : `₦${Number(result.rate.ratePerKg).toLocaleString()}/kg`
-                  }
-                </span>
-              </div>
-              <hr className="border-surface-200" />
-              <div className="flex justify-between text-sm">
-                <span className="text-surface-500">Shipping Fee</span>
-                <span className="font-medium text-surface-900">₦{Number(result.shipment.shippingFee).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-surface-500">Packing Fee</span>
-                <span className="font-medium text-surface-900">₦{Number(result.shipment.packingFee).toLocaleString()}</span>
-              </div>
-              {result.shipment.additionalFees > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-surface-500">Additional Fees</span>
-                  <span className="font-medium text-surface-900">₦{Number(result.shipment.additionalFees).toLocaleString()}</span>
+                <div className="flex justify-between">
+                  <span className="text-surface-500">Weight</span>
+                  <span className="font-medium">{result.shipment.weightKg} kg</span>
                 </div>
-              )}
-              <hr className="border-surface-200" />
-              <div className="flex justify-between text-sm">
-                <span className="font-semibold text-surface-900">Total</span>
-                <span className="font-bold text-lg text-surface-900">₦{Number(result.shipment.totalAmount).toLocaleString()}</span>
+                {result.shipment.volumeCBM && (
+                  <div className="flex justify-between">
+                    <span className="text-surface-500">Volume</span>
+                    <span className="font-medium">{result.shipment.volumeCBM} CBM</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-surface-500">Rate</span>
+                  <span className="font-medium">${result.rate.freightCostUSD}/{result.rate.billingUnit}</span>
+                </div>
+                <div className="border-t border-surface-200 pt-2 mt-2">
+                  <div className="flex justify-between">
+                    <span className="text-surface-500">Freight Cost (USD)</span>
+                    <span className="font-medium">${result.shipment.freightUSD?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-surface-500">Packing Fee (USD)</span>
+                    <span className="font-medium">${result.shipment.packingFeeUSD?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-surface-500">Clearing Fee ({result.shipment.clearingCurrency})</span>
+                    <span className="font-medium">{result.shipment.clearingCurrency === 'NGN' ? '₦' : result.shipment.clearingCurrency === 'GHS' ? 'GH₵' : '$'}{result.shipment.clearingFee?.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs text-surface-400 mt-1">
+                  <span>Exchange Rate</span>
+                  <span>1 USD = {result.shipment.localCurrency === 'NGN' ? '₦' : result.shipment.localCurrency === 'GHS' ? 'GH₵' : '$'}{result.shipment.exchangeRate?.toLocaleString()}</span>
+                </div>
+                <div className="border-t border-surface-200 pt-2 mt-2">
+                  <div className="flex justify-between text-base font-bold">
+                    <span>Total ({result.shipment.localCurrency})</span>
+                    <span className="text-brand-600">{result.shipment.localCurrency === 'NGN' ? '₦' : result.shipment.localCurrency === 'GHS' ? 'GH₵' : '$'}{result.shipment.totalLocal?.toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
             </div>
 

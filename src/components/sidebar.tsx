@@ -23,7 +23,6 @@ const navItems = [
   { label: 'Packages', href: '/packages', icon: Package },
   { label: 'Shipment Requests', href: '/shipment-requests', icon: Inbox },
   { label: 'Master Shipments', href: '/master-shipments', icon: Truck },
-  { label: 'Shipments', href: '/shipments', icon: Truck },
   { label: 'Bills', href: '/bills', icon: Receipt },
   { label: 'Users', href: '/users', icon: Users },
   { label: 'Settings', href: '/settings', icon: Settings },
