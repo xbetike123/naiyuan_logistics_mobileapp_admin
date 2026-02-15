@@ -15,7 +15,7 @@ import {
   Menu,
   Inbox,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 
 const navItems = [
@@ -23,7 +23,7 @@ const navItems = [
   { label: 'Packages', href: '/packages', icon: Package },
   { label: 'Shipment Requests', href: '/shipment-requests', icon: Inbox },
   { label: 'Master Shipments', href: '/master-shipments', icon: Truck },
-  { label: 'Bills', href: '/bills', icon: Receipt },
+  { label: 'Bills', href: '/bills', icon: Receipt, badgeKey: 'pendingPayments' },
   { label: 'Users', href: '/users', icon: Users },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
@@ -31,6 +31,35 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [pendingPayments, setPendingPayments] = useState(0);
+
+  // Poll for pending payments every 30 seconds
+  const fetchPendingCount = useCallback(async () => {
+    try {
+      const data = await api.getPendingPayments();
+      setPendingPayments(Array.isArray(data) ? data.length : 0);
+    } catch {
+      // Silently fail — sidebar shouldn't break if this fails
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchPendingCount]);
+
+  // Also refresh when navigating to bills page
+  useEffect(() => {
+    if (pathname === '/bills') {
+      fetchPendingCount();
+    }
+  }, [pathname, fetchPendingCount]);
+
+  function getBadgeCount(badgeKey?: string) {
+    if (badgeKey === 'pendingPayments') return pendingPayments;
+    return 0;
+  }
 
   function handleLogout() {
     api.clearToken();
@@ -74,13 +103,14 @@ export function Sidebar() {
             item.href === '/'
               ? pathname === '/'
               : pathname.startsWith(item.href);
+          const badgeCount = getBadgeCount(item.badgeKey);
 
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                 isActive
                   ? 'bg-brand-400/10 text-brand-400'
                   : 'text-surface-400 hover:text-white hover:bg-surface-800/50',
@@ -88,8 +118,24 @@ export function Sidebar() {
               )}
               title={collapsed ? item.label : undefined}
             >
-              <item.icon size={20} className="flex-shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              <div className="relative flex-shrink-0">
+                <item.icon size={20} />
+                {/* Badge dot on icon when collapsed */}
+                {collapsed && badgeCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-surface-950 animate-pulse" />
+                )}
+              </div>
+              {!collapsed && (
+                <>
+                  <span className="truncate">{item.label}</span>
+                  {/* Badge count when expanded */}
+                  {badgeCount > 0 && (
+                    <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 flex items-center justify-center px-1.5 rounded-full text-[10px] font-bold bg-amber-500 text-white animate-pulse">
+                      {badgeCount > 99 ? '99+' : badgeCount}
+                    </span>
+                  )}
+                </>
+              )}
             </Link>
           );
         })}
