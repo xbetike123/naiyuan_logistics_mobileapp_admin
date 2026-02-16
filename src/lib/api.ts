@@ -356,6 +356,52 @@ class ApiClient {
     });
   }
 
+  // Referrals & Loyalty
+  async getReferralConfig() {
+    return this.request('/admin/referral-config');
+  }
+
+  async updateReferralConfig(data: { referrerRewardNGN?: number; refereeRewardNGN?: number; expiryDays?: number }) {
+    return this.request('/admin/referral-config', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAllReferrals() {
+    return this.request('/admin/referrals');
+  }
+
+  async getLoyaltyTiers() {
+    return this.request('/admin/loyalty-tiers');
+  }
+
+  async updateLoyaltyTier(tierId: string, data: any) {
+    return this.request(`/admin/loyalty-tiers/${tierId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAllWallets(search?: string) {
+    const params = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.request(`/admin/wallets${params}`);
+  }
+
+  async creditWallet(userId: string, data: { amount: number; description: string }) {
+    return this.request(`/admin/wallets/${userId}/credit`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async debitWallet(userId: string, data: { amount: number; description: string }) {
+    return this.request(`/admin/wallets/${userId}/debit`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
 }
 
 export const api = new ApiClient();

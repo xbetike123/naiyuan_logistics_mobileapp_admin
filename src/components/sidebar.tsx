@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   Menu,
   Inbox,
+  Gift,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
@@ -26,6 +27,7 @@ const navItems = [
   { label: 'Master Shipments', href: '/master-shipments', icon: Truck },
   { label: 'Bills', href: '/bills', icon: Receipt, badgeKey: 'pendingPayments' },
   { label: 'Pickups', href: '/pickups', icon: PackageCheck },
+  { label: 'Rewards', href: '/rewards', icon: Gift },
   { label: 'Users', href: '/users', icon: Users },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
