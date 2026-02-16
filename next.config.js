@@ -4,10 +4,9 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:3000/api/v1/:path*',
+        destination: `${process.env.API_URL || 'http://localhost:3000'}/api/v1/:path*`,
       },
     ];
   },
 };
-
 module.exports = nextConfig;
