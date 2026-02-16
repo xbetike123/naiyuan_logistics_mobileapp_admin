@@ -165,7 +165,7 @@ class ApiClient {
     });
   }
 
-  async updateMasterShipmentStatus(id: string, data: { status: string; notes?: string; location?: string }) {
+  async updateMasterShipmentStatus(id: string, data: { status: string; trackingCode?: string; notes?: string; location?: string }) {
     return this.request(`/admin/master-shipments/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -307,6 +307,53 @@ class ApiClient {
 
   async rejectShipmentRequest(id: string, reason?: string) {
     return this.request(`/admin/shipment-requests/${id}/reject`, { method: 'PUT', body: JSON.stringify({ reason }) });
+  }
+
+  // Pickups
+  async getPickupRequests(status?: string, date?: string) {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (date) params.set('date', date);
+    const qs = params.toString();
+    return this.request(`/admin/pickups${qs ? `?${qs}` : ''}`);
+  }
+
+  async updatePickupStatus(pickupId: string, data: { status: string; notes?: string }) {
+    return this.request(`/admin/pickups/${pickupId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPickupSlots(date: string) {
+    return this.request(`/admin/pickup-slots?date=${date}`);
+  }
+
+  async createPickupSlot(data: { date: string; startTime: string; endTime: string; maxPickups?: number }) {
+    return this.request('/admin/pickup-slots', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async bulkCreatePickupSlots(data: { date: string; slots: { startTime: string; endTime: string }[]; maxPickups?: number }) {
+    return this.request('/admin/pickup-slots/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePickupSlot(slotId: string, data: { maxPickups?: number; isActive?: boolean }) {
+    return this.request(`/admin/pickup-slots/${slotId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePickupSlot(slotId: string) {
+    return this.request(`/admin/pickup-slots/${slotId}`, {
+      method: 'DELETE',
+    });
   }
 
 }

@@ -8,6 +8,7 @@ import {
   Package,
   Truck,
   Receipt,
+  PackageCheck,
   Users,
   Settings,
   LogOut,
@@ -24,6 +25,7 @@ const navItems = [
   { label: 'Shipment Requests', href: '/shipment-requests', icon: Inbox },
   { label: 'Master Shipments', href: '/master-shipments', icon: Truck },
   { label: 'Bills', href: '/bills', icon: Receipt, badgeKey: 'pendingPayments' },
+  { label: 'Pickups', href: '/pickups', icon: PackageCheck },
   { label: 'Users', href: '/users', icon: Users },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
