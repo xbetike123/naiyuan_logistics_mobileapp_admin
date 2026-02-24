@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/status-badge';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatShippingMethod } from '@/lib/utils';
 import { RefreshCw, Inbox, Check, X, ChevronDown, ChevronUp, Package } from 'lucide-react';
 
 interface ShipmentRequest {
@@ -111,7 +111,7 @@ export default function ShipmentRequestsPage() {
                       <span className="font-mono text-sm font-semibold text-surface-900">{req.shipmentNumber}</span>
                       <StatusBadge status={req.status} />
                       <span className="text-xs px-2 py-0.5 rounded-full bg-surface-100 text-surface-600">
-                        {req.method === 'AIR' ? '✈️ Air' : '🚢 Sea'}
+                        {formatShippingMethod(req.method)}
                       </span>
                     </div>
                     <p className="text-sm text-surface-500 mt-0.5">

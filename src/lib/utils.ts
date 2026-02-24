@@ -46,3 +46,31 @@ export const STATUS_COLORS: Record<string, { bg: string; text: string; dot: stri
   PAID: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
   OVERDUE: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
 };
+
+export function formatShippingMethod(method: string, destination?: string, route?: string): string {
+  const mode = method === 'AIR' ? 'Air' : 'Sea';
+  const icon = method === 'AIR' ? '✈️' : '🚢';
+
+  const destMap: Record<string, string> = {
+    LAGOS_NIGERIA: 'LA',
+    ABUJA_NIGERIA: 'ABJ',
+    GHANA: 'GH',
+    UK: 'UK',
+    USA: 'US',
+    ITALY: 'IT',
+    CANADA: 'CA',
+    UAE: 'AE',
+  };
+
+  const routeMap: Record<string, string> = {
+    HONG_KONG: 'HK',
+    GUANGZHOU: 'GZ',
+  };
+
+  const destCode = destMap[destination || ''] || '';
+  const routeCode = routeMap[route || ''] || '';
+
+  // Build label: Air-GZ, Air-HK, Sea-LA, Air-UK, etc.
+  const suffix = routeCode || destCode;
+  return suffix ? `${icon} ${mode}-${suffix}` : `${icon} ${mode}`;
+}

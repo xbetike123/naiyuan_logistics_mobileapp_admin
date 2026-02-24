@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/status-badge';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatShippingMethod } from '@/lib/utils';
 import {
   RefreshCw,
   Plus,
@@ -192,7 +192,7 @@ export default function MasterShipmentsPage() {
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs px-1.5 py-0.5 rounded bg-surface-100 text-surface-500">
-                              {ms.method === 'AIR' ? '✈️ Air' : '🚢 Sea'}
+                              {formatShippingMethod(ms.method, ms.destination, ms.route)}
                             </span>
                             {ms.route && (
                               <span className="text-xs text-surface-400">📍 {ms.route}</span>
@@ -311,7 +311,7 @@ export default function MasterShipmentsPage() {
                         <StatusBadge status={selectedMs.status} />
                       </div>
                       <div className="flex items-center gap-3 text-sm text-surface-500">
-                        <span>{selectedMs.method === 'AIR' ? '✈️ Air Freight' : '🚢 Sea Freight'}</span>
+                        <span>{formatShippingMethod(selectedMs.method, selectedMs.destination, selectedMs.route)}</span>
                         {selectedMs.route && <span>📍 {selectedMs.route}</span>}
                         {selectedMs.destination && (
                           <>
@@ -671,7 +671,7 @@ function CreateMasterShipmentModal({ onClose, onCreated }: { onClose: () => void
                           {s.shipmentNumber}
                         </span>
                         <span className="text-xs text-surface-500">
-                          {s.method === 'AIR' ? '✈️' : '🚢'}
+                          {formatShippingMethod(s.method)}
                         </span>
                       </div>
                       <p className="text-xs text-surface-500">
@@ -981,7 +981,7 @@ function AddDetailsModal({
             <p className="text-sm text-surface-500 font-mono mt-0.5">{shipment.shipmentNumber}</p>
             <p className="text-xs text-surface-400 mt-1">
               {shipment.user.firstName} {shipment.user.lastName} ·{' '}
-              {shipment.method === 'AIR' ? '✈️ Air' : '🚢 Sea'} · {shipment.packages.length} packages
+              {formatShippingMethod(shipment.method)} · {shipment.packages.length} packages
             </p>
           </div>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-600">
