@@ -69,6 +69,19 @@ class ApiClient {
     });
   }
 
+  async adminLogin(username: string, password: string) {
+    const res = await fetch('/api/admin-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Login failed');
+    }
+    return res.json();
+  }
+
   async verifyOtp(email: string, code: string) {
     return this.request('/auth/verify-otp', {
       method: 'POST',
@@ -115,10 +128,16 @@ class ApiClient {
     });
   }
 
-  async getShipments(status?: string, search?: string) {
+  async getShipments(
+    status?: string,
+    search?: string,
+    pagination?: { page?: number; limit?: number },
+  ) {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     if (search) params.set('search', search);
+    if (pagination?.page) params.set('page', String(pagination.page));
+    if (pagination?.limit) params.set('limit', String(pagination.limit));
     const qs = params.toString();
     return this.request(`/admin/shipments${qs ? `?${qs}` : ''}`);
   }
@@ -165,7 +184,7 @@ class ApiClient {
     });
   }
 
-  async updateMasterShipmentStatus(id: string, data: { status: string; trackingCode?: string; notes?: string; location?: string }) {
+  async updateMasterShipmentStatus(id: string, data: { trackingCode: string; notes?: string; location?: string }) {
     return this.request(`/admin/master-shipments/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -353,6 +372,95 @@ class ApiClient {
   async deletePickupSlot(slotId: string) {
     return this.request(`/admin/pickup-slots/${slotId}`, {
       method: 'DELETE',
+    });
+  }
+
+  // China Pickups
+  async getChinaPickups(status?: string, search?: string, city?: string) {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (search) params.set('search', search);
+    if (city) params.set('city', city);
+    const qs = params.toString();
+    return this.request(`/admin/china-pickups${qs ? `?${qs}` : ''}`);
+  }
+
+  async getChinaPickupStats() {
+    return this.request('/admin/china-pickups/stats');
+  }
+
+  async getChinaPickup(id: string) {
+    return this.request(`/admin/china-pickups/${id}`);
+  }
+
+  async sendChinaPickupQuote(
+    id: string,
+    data: { quotedPriceCNY: number; exchangeRate?: number; quoteNotes?: string },
+  ) {
+    return this.request(`/admin/china-pickups/${id}/quote`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateChinaPickupStatus(
+    id: string,
+    data: { status: string; note?: string },
+  ) {
+    return this.request(`/admin/china-pickups/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async assignChinaPickup(id: string, assignedTo: string) {
+    return this.request(`/admin/china-pickups/${id}/assign`, {
+      method: 'PUT',
+      body: JSON.stringify({ assignedTo }),
+    });
+  }
+
+  // Supplier Payments
+  async getSupplierPayments(status?: string, search?: string) {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (search) params.set('search', search);
+    const qs = params.toString();
+    return this.request(`/admin/supplier-payments${qs ? `?${qs}` : ''}`);
+  }
+
+  async getSupplierPaymentStats() {
+    return this.request('/admin/supplier-payments/stats');
+  }
+
+  async getSupplierPayment(id: string) {
+    return this.request(`/admin/supplier-payments/${id}`);
+  }
+
+  async verifySupplierPayment(
+    id: string,
+    data: { adminNotes?: string },
+  ) {
+    return this.request(`/admin/supplier-payments/${id}/verify`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async markSupplierPaid(
+    id: string,
+    data: { adminProofUrl: string; adminNotes?: string },
+  ) {
+    return this.request(`/admin/supplier-payments/${id}/mark-paid`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async rejectSupplierPayment(id: string, reason: string) {
+    return this.request(`/admin/supplier-payments/${id}/reject`, {
+      method: 'PUT',
+      body: JSON.stringify({ reason }),
     });
   }
 

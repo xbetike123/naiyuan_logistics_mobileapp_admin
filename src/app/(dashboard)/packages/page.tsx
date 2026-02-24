@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/status-badge';
+import { MultiImageUpload } from '@/components/multi-image-upload';
 import { formatDate } from '@/lib/utils';
 import {
   Search,
@@ -11,7 +12,6 @@ import {
   X,
   Package as PackageIcon,
   Check,
-  Camera,
   StickyNote,
   ArrowUpDown,
 } from 'lucide-react';
@@ -48,8 +48,8 @@ export default function PackagesPage() {
   const fetchPackages = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.getPackages(filterStatus || undefined, search || undefined);
-      setPackages(data);
+      const res = await api.getPackages(filterStatus || undefined, search || undefined);
+      setPackages(Array.isArray(res) ? res : res.data || []);
     } catch (err) {
       console.error('Failed to fetch packages:', err);
     } finally {
@@ -100,7 +100,16 @@ export default function PackagesPage() {
   async function handleUpdatePackage(id: string, data: any) {
     setActionLoading(true);
     try {
-      await api.updatePackage(id, data);
+      const { status, ...rest } = data;
+
+      if (status) {
+        await api.bulkUpdatePackageStatus([id], status);
+      }
+
+      if (Object.keys(rest).length > 0) {
+        await api.updatePackage(id, rest);
+      }
+
       setEditingPkg(null);
       await fetchPackages();
     } catch (err: any) {
@@ -294,7 +303,7 @@ function EditPackageModal({
   const [status, setStatus] = useState(pkg.status);
   const [description, setDescription] = useState(pkg.description || '');
   const [warehouseNotes, setWarehouseNotes] = useState(pkg.warehouseNotes || '');
-  const [photoUrls, setPhotoUrls] = useState(pkg.photoUrls.join('\n'));
+  const [photoUrls, setPhotoUrls] = useState<string[]>(pkg.photoUrls || []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -303,12 +312,8 @@ function EditPackageModal({
     if (description !== (pkg.description || '')) data.description = description;
     if (warehouseNotes !== (pkg.warehouseNotes || '')) data.warehouseNotes = warehouseNotes;
 
-    const urls = photoUrls
-      .split('\n')
-      .map((u) => u.trim())
-      .filter(Boolean);
-    if (JSON.stringify(urls) !== JSON.stringify(pkg.photoUrls)) {
-      data.photoUrls = urls;
+    if (JSON.stringify(photoUrls) !== JSON.stringify(pkg.photoUrls)) {
+      data.photoUrls = photoUrls;
     }
 
     if (Object.keys(data).length === 0) {
@@ -386,20 +391,12 @@ function EditPackageModal({
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-surface-700 mb-1.5">
-              <span className="flex items-center gap-1.5">
-                <Camera size={14} /> Photo URLs
-              </span>
-            </label>
-            <textarea
-              value={photoUrls}
-              onChange={(e) => setPhotoUrls(e.target.value)}
-              placeholder="One URL per line"
-              rows={3}
-              className="w-full px-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
-            />
-          </div>
+          <MultiImageUpload
+            values={photoUrls}
+            onChange={setPhotoUrls}
+            label="Package Photos"
+            max={10}
+          />
 
           <div className="flex items-center gap-3 pt-2">
             <button

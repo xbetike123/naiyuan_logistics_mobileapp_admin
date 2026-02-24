@@ -16,6 +16,8 @@ import {
   Menu,
   Inbox,
   Gift,
+  MapPin,
+  CreditCard,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
@@ -27,6 +29,8 @@ const navItems = [
   { label: 'Master Shipments', href: '/master-shipments', icon: Truck },
   { label: 'Bills', href: '/bills', icon: Receipt, badgeKey: 'pendingPayments' },
   { label: 'Pickups', href: '/pickups', icon: PackageCheck },
+  { label: 'China Pickups', href: '/china-pickups', icon: MapPin },
+  { label: 'Supplier Payments', href: '/supplier-payments', icon: CreditCard },
   { label: 'Rewards', href: '/rewards', icon: Gift },
   { label: 'Users', href: '/users', icon: Users },
   { label: 'Settings', href: '/settings', icon: Settings },
@@ -80,12 +84,16 @@ export function Sidebar() {
       {/* Logo */}
       <div className="h-16 flex items-center px-5 border-b border-surface-800/50">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-brand-400 flex items-center justify-center flex-shrink-0">
-            <span className="text-surface-950 font-bold text-sm">N</span>
+          <div className="w-8 h-8 rounded-lg bg-white/95 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <img
+              src="/final_logo.png"
+              alt="Naiyuan Logistics"
+              className="w-7 h-7 object-contain"
+            />
           </div>
           {!collapsed && (
             <span className="text-lg font-bold text-white tracking-tight truncate">
-              Naiyuan
+              Naiyuan Logistics
             </span>
           )}
         </div>

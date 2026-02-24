@@ -58,8 +58,8 @@ export default function BillsPage() {
   const fetchBills = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.getBills(filterStatus || undefined, search || undefined);
-      setBills(data);
+      const res = await api.getBills(filterStatus || undefined, search || undefined);
+      setBills(Array.isArray(res) ? res : res.data || []);
     } catch (err) {
       console.error('Failed to fetch bills:', err);
     } finally {

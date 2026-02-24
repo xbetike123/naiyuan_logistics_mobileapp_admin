@@ -1,35 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { Eye, EyeOff, Lock, User } from 'lucide-react';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  async function handleSendOtp(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      await api.login(email);
-      setStep('otp');
-    } catch (err: any) {
-      setError(err.message || 'Failed to send OTP');
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Clear any stale/invalid tokens when landing on login page
+  useEffect(() => {
+    api.clearToken();
+  }, []);
 
-  async function handleVerifyOtp(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const res = await api.verifyOtp(email, otp);
+      const res = await api.adminLogin(username, password);
       if (res.accessToken) {
         api.setToken(res.accessToken);
         window.location.href = '/';
@@ -37,7 +29,7 @@ export default function LoginPage() {
         setError('Login failed — no token received');
       }
     } catch (err: any) {
-      setError(err.message || 'Invalid OTP');
+      setError(err.message || 'Invalid credentials');
     } finally {
       setLoading(false);
     }
@@ -54,79 +46,92 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-brand-400 flex items-center justify-center">
-              <span className="text-surface-950 font-bold text-lg">N</span>
+            <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/10 p-1">
+              <img
+                src="/final_logo.png"
+                alt="Naiyuan Logistics"
+                className="h-full w-full object-contain"
+              />
             </div>
-            <span className="text-2xl font-bold text-white tracking-tight">Naiyuan</span>
+            <span className="text-2xl font-bold text-white tracking-tight">Naiyuan Logistics</span>
           </div>
           <p className="text-surface-400 text-sm">Admin Dashboard</p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-2xl shadow-black/20 p-8">
-          <h2 className="text-xl font-semibold text-surface-900 mb-1">
-            {step === 'email' ? 'Sign in' : 'Enter verification code'}
-          </h2>
+          <h2 className="text-xl font-semibold text-surface-900 mb-1">Sign in</h2>
           <p className="text-surface-500 text-sm mb-6">
-            {step === 'email'
-              ? 'Enter your admin email to receive a login code'
-              : `We sent a 6-digit code to ${email}`}
+            Enter your admin credentials to continue
           </p>
 
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200">
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-red-600 text-xs font-bold">!</span>
+              </div>
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
 
-          {step === 'email' ? (
-            <form onSubmit={handleSendOtp}>
-              <label className="block text-sm font-medium text-surface-700 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@naiyuan.com"
-                required
-                className="w-full px-4 py-3 rounded-xl border border-surface-200 bg-surface-50 text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent transition-all"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-4 px-4 py-3 rounded-xl bg-surface-900 text-white font-medium hover:bg-surface-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {loading ? 'Sending...' : 'Continue'}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOtp}>
-              <label className="block text-sm font-medium text-surface-700 mb-1.5">Verification Code</label>
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="Enter 6-digit code"
-                maxLength={6}
-                required
-                autoFocus
-                className="w-full px-4 py-3 rounded-xl border border-surface-200 bg-surface-50 text-surface-900 text-center text-2xl font-mono tracking-[0.5em] placeholder:text-surface-400 placeholder:text-base placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent transition-all"
-              />
-              <button
-                type="submit"
-                disabled={loading || otp.length < 6}
-                className="w-full mt-4 px-4 py-3 rounded-xl bg-surface-900 text-white font-medium hover:bg-surface-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {loading ? 'Verifying...' : 'Verify & Sign In'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setStep('email'); setOtp(''); setError(''); }}
-                className="w-full mt-2 px-4 py-2 text-sm text-surface-500 hover:text-surface-700 transition-colors"
-              >
-                ← Use a different email
-              </button>
-            </form>
-          )}
+          <form onSubmit={handleLogin} className="space-y-4">
+            {/* Username */}
+            <div>
+              <label className="block text-sm font-medium text-surface-700 mb-1.5">Username</label>
+              <div className="relative">
+                <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username"
+                  required
+                  autoFocus
+                  autoComplete="username"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-surface-200 bg-surface-50 text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium text-surface-700 mb-1.5">Password</label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  required
+                  autoComplete="current-password"
+                  className="w-full pl-11 pr-12 py-3 rounded-xl border border-surface-200 bg-surface-50 text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !username || !password}
+              className="w-full mt-2 px-4 py-3 rounded-xl bg-surface-900 text-white font-medium hover:bg-surface-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Signing in...
+                </span>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
         </div>
 
         <p className="text-center text-surface-500 text-xs mt-6">

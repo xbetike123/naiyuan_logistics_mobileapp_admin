@@ -36,8 +36,8 @@ export default function ShipmentsPage() {
   const fetchShipments = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.getShipments(filterStatus || undefined, search || undefined);
-      setShipments(data);
+      const res = await api.getShipments(filterStatus || undefined, search || undefined);
+      setShipments(Array.isArray(res) ? res : res.data || []);
     } catch (err) {
       console.error('Failed to fetch shipments:', err);
     } finally {

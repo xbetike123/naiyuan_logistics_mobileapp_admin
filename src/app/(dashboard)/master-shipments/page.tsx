@@ -64,10 +64,17 @@ interface ApprovedShipment {
   method: string;
   user: { firstName: string; lastName: string; email: string };
   packages: any[];
+  masterShipmentId?: string | null;
 }
 
 const STATUSES = ['PROCESSING', 'SHIPPED', 'IN_TRANSIT', 'ARRIVED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
 const ROUTES = ['GUANGZHOU', 'YIWU', 'SHENZHEN'];
+
+function normalizeListResponse<T>(payload: any): T[] {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+}
 
 export default function MasterShipmentsPage() {
   const [masterShipments, setMasterShipments] = useState<MasterShipment[]>([]);
@@ -83,7 +90,7 @@ export default function MasterShipmentsPage() {
   const fetchMasterShipments = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.getMasterShipments();
+      const data = normalizeListResponse<MasterShipment>(await api.getMasterShipments());
       setMasterShipments(data);
       // Auto-select first if none selected
       if (data.length > 0 && !selectedId) {
@@ -488,13 +495,34 @@ function CreateMasterShipmentModal({ onClose, onCreated }: { onClose: () => void
   const [fetchingShipments, setFetchingShipments] = useState(true);
 
   useEffect(() => {
-    api
-      .getShipments('PROCESSING')
-      .then((data) => {
-        const unassigned = data.filter((s: any) => !s.masterShipmentId);
-        setApprovedShipments(unassigned);
-      })
-      .finally(() => setFetchingShipments(false));
+    let mounted = true;
+
+    async function fetchApprovedShipments() {
+      try {
+        const all: ApprovedShipment[] = [];
+        let page = 1;
+        const limit = 100;
+
+        while (true) {
+          const payload = await api.getShipments('PROCESSING', undefined, { page, limit });
+          const shipments = normalizeListResponse<ApprovedShipment>(payload);
+          all.push(...shipments);
+
+          if (!payload?.meta?.hasNext) break;
+          page += 1;
+        }
+
+        const unassigned = all.filter((s) => !s.masterShipmentId);
+        if (mounted) setApprovedShipments(unassigned);
+      } finally {
+        if (mounted) setFetchingShipments(false);
+      }
+    }
+
+    fetchApprovedShipments();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   function toggleSelect(id: string) {
@@ -710,25 +738,9 @@ function UpdateMasterStatusModal({
   const filteredStatuses = trackingStatuses.filter(
     (s) =>
       (s.destination === 'ALL' || s.destination === destination) &&
+      (s.method === 'ALL' || s.method === masterShipment.method) &&
       !usedStatusCodes.has(s.code)
   );
-
-  function getShipmentStatus(trackingCode: string): string {
-    const map: Record<string, string> = {
-      RECEIVED_WAREHOUSE: 'PROCESSING',
-      PREPARED_SHIPPING: 'PROCESSING',
-      DEPARTED_CONSOLIDATION: 'SHIPPED',
-      ARRIVED_AIRPORT: 'SHIPPED',
-      CUSTOMS_CLEARED_ORIGIN: 'SHIPPED',
-      IN_TRANSIT: 'IN_TRANSIT',
-      TRANSIT_HUB: 'IN_TRANSIT',
-      ARRIVED_DESTINATION: 'ARRIVED',
-      CUSTOMS_CLEARED_DEST: 'ARRIVED',
-      OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
-      DELIVERED: 'DELIVERED',
-    };
-    return map[trackingCode] || 'PROCESSING';
-  }
 
   useEffect(() => {
     Promise.all([api.getTrackingStatuses(), api.getTrackingLocations()])
@@ -751,13 +763,8 @@ function UpdateMasterStatusModal({
     }
 
     setLoading(true);
-    const selectedStatus = trackingStatuses.find((s) => s.code === trackingStatus);
-    const selectedLocation = trackingLocations.find((l) => l.code === locationCode);
-    const shipmentStatus = getShipmentStatus(trackingStatus);
-
     try {
       await api.updateMasterShipmentStatus(masterShipment.id, {
-        status: shipmentStatus,
         trackingCode: trackingStatus,
         notes: `${selectedStatus?.label || trackingStatus}${notes ? ' — ' + notes : ''}`,
         location: selectedLocation?.label || locationCode,
@@ -769,6 +776,9 @@ function UpdateMasterStatusModal({
       setLoading(false);
     }
   }
+
+  const selectedStatus = trackingStatuses.find((s) => s.code === trackingStatus);
+  const selectedLocation = trackingLocations.find((l) => l.code === locationCode);
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -829,7 +839,7 @@ function UpdateMasterStatusModal({
                 <p className="text-xs text-surface-400 mt-1.5">
                   Shipment status will be set to:{' '}
                   <span className="font-medium text-surface-600">
-                    {getShipmentStatus(trackingStatus).replace(/_/g, ' ')}
+                    {selectedStatus?.shipmentStatus?.replace(/_/g, ' ') || 'PROCESSING'}
                   </span>
                 </p>
               )}
@@ -875,10 +885,10 @@ function UpdateMasterStatusModal({
                   <div className="w-2 h-2 rounded-full bg-brand-400 mt-1.5 flex-shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-surface-900">
-                      {filteredStatuses.find((s) => s.code === trackingStatus)?.label}
+                      {selectedStatus?.label}
                     </p>
                     <p className="text-xs text-surface-500">
-                      📍 {trackingLocations.find((l) => l.code === locationCode)?.label}
+                      📍 {selectedLocation?.label}
                     </p>
                     {notes && <p className="text-xs text-surface-400 mt-0.5">{notes}</p>}
                   </div>

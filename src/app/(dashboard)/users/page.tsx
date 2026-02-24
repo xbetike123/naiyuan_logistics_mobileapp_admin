@@ -31,7 +31,12 @@ export default function UsersPage() {
 
   useEffect(() => {
     setLoading(true);
-    api.getUsers(search || undefined).then(setUsers).finally(() => setLoading(false));
+    api
+      .getUsers(search || undefined)
+      .then((res) => {
+        setUsers(Array.isArray(res) ? res : res.data || []);
+      })
+      .finally(() => setLoading(false));
   }, [search]);
 
   return (
