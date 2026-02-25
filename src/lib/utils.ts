@@ -47,7 +47,7 @@ export const STATUS_COLORS: Record<string, { bg: string; text: string; dot: stri
   OVERDUE: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
 };
 
-export function formatShippingMethod(method: string, destination?: string, route?: string): string {
+export function formatShippingMethod(method: string, destination?: string | null, route?: string | null): string {
   const mode = method === 'AIR' ? 'Air' : 'Sea';
   const icon = method === 'AIR' ? '✈️' : '🚢';
 

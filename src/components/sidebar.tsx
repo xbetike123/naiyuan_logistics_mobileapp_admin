@@ -24,8 +24,8 @@ import { api } from '@/lib/api';
 
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { label: 'Packages', href: '/packages', icon: Package },
-  { label: 'Shipment Requests', href: '/shipment-requests', icon: Inbox },
+  { label: 'Packages', href: '/packages', icon: Package, badgeKey: 'packages' },
+  { label: 'Shipment Requests', href: '/shipment-requests', icon: Inbox, badgeKey: 'shipmentRequests' },
   { label: 'Master Shipments', href: '/master-shipments', icon: Truck },
   { label: 'Bills', href: '/bills', icon: Receipt, badgeKey: 'pendingPayments' },
   { label: 'Pickups', href: '/pickups', icon: PackageCheck },
@@ -39,34 +39,31 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [pendingPayments, setPendingPayments] = useState(0);
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
-  // Poll for pending payments every 30 seconds
-  const fetchPendingCount = useCallback(async () => {
+  const fetchNotificationCounts = useCallback(async () => {
     try {
-      const data = await api.getPendingPayments();
-      setPendingPayments(Array.isArray(data) ? data.length : 0);
+      const data = await api.getNotificationCounts();
+      setBadgeCounts(data);
     } catch {
-      // Silently fail — sidebar shouldn't break if this fails
+      // Silently fail
     }
   }, []);
 
   useEffect(() => {
-    fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 30000);
+    fetchNotificationCounts();
+    const interval = setInterval(fetchNotificationCounts, 30000);
     return () => clearInterval(interval);
-  }, [fetchPendingCount]);
+  }, [fetchNotificationCounts]);
 
-  // Also refresh when navigating to bills page
+  // Refresh on navigation
   useEffect(() => {
-    if (pathname === '/bills') {
-      fetchPendingCount();
-    }
-  }, [pathname, fetchPendingCount]);
+    fetchNotificationCounts();
+  }, [pathname, fetchNotificationCounts]);
 
   function getBadgeCount(badgeKey?: string) {
-    if (badgeKey === 'pendingPayments') return pendingPayments;
-    return 0;
+    if (!badgeKey) return 0;
+    return badgeCounts[badgeKey] || 0;
   }
 
   function handleLogout() {

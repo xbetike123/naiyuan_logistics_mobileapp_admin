@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Sidebar } from '@/components/sidebar';
+import { TopBar } from '@/components/top-bar';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -81,6 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-surface-50">
       <Sidebar />
       <main className="ml-[260px] min-h-screen">
+        <TopBar />
         <div className="p-8">{children}</div>
       </main>
     </div>

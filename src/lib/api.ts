@@ -93,6 +93,10 @@ class ApiClient {
     return this.request('/admin/dashboard');
   }
 
+  async getNotificationCounts() {
+    return this.request('/admin/notification-counts');
+  }
+
   async getUsers(search?: string) {
     const params = search ? `?search=${encodeURIComponent(search)}` : '';
     return this.request(`/admin/users${params}`);
